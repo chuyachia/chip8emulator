@@ -1,39 +1,69 @@
 package com.chuyachia.chip8emulator;
 
 public class Memory {
+
+    public final static int SPRITE_SIZE = 5;
+    private final static int MEMORY_SIZE = 4096;
     private final static int MEMORY_START = 0x200;
-    private int programCounter;
+    private final static byte[][] DEFAULT_SPRITES = {
+            {(byte) 0xF0, (byte) 0x90, (byte) 0x90, (byte) 0x90, (byte) 0xF0},
+            {(byte) 0x20, (byte) 0x60, (byte) 0x20, (byte) 0x20, (byte) 0x70},
+            {(byte) 0xF0, (byte) 0x10, (byte) 0xF0, (byte) 0x80, (byte) 0xF0},
+            {(byte) 0xF0, (byte) 0x10, (byte) 0xF0, (byte) 0x10, (byte) 0xF0},
+            {(byte) 0x90, (byte) 0x90, (byte) 0xF0, (byte) 0x10, (byte) 0x10},
+            {(byte) 0xF0, (byte) 0x80, (byte) 0xF0, (byte) 0x10, (byte) 0xF0},
+            {(byte) 0xF0, (byte) 0x80, (byte) 0xF0, (byte) 0x90, (byte) 0xF0},
+            {(byte) 0xF0, (byte) 0x10, (byte) 0x20, (byte) 0x40, (byte) 0x40},
+            {(byte) 0xF0, (byte) 0x90, (byte) 0xF0, (byte) 0x90, (byte) 0xF0},
+            {(byte) 0xF0, (byte) 0x90, (byte) 0xF0, (byte) 0x10, (byte) 0xF0},
+            {(byte) 0xF0, (byte) 0x90, (byte) 0xF0, (byte) 0x90, (byte) 0x90},
+            {(byte) 0xE0, (byte) 0x90, (byte) 0xE0, (byte) 0x90, (byte) 0xE0},
+            {(byte) 0xF0, (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0xF0},
+            {(byte) 0xE0, (byte) 0x90, (byte) 0x90, (byte) 0x90, (byte) 0xE0},
+            {(byte) 0xF0, (byte) 0x80, (byte) 0xF0, (byte) 0x80, (byte) 0xF0},
+            {(byte) 0xF0, (byte) 0x80, (byte) 0xF0, (byte) 0x80, (byte) 0x80}
+    };
+
+    private short programCounter;
     private final byte[] memory;
-    private int currentGameEnd;
 
     public Memory() {
         this.programCounter = MEMORY_START;
-        this.memory = new byte[4096];
+        this.memory = new byte[MEMORY_SIZE];
+        loadSpritesInReservedMemory();
     }
 
-    public void loadGame(byte[] rom) {
+    public void loadGame(byte[] rom) throws Exception {
         int currentMemory = MEMORY_START;
+
         for (byte b : rom) {
+            if (currentMemory >= MEMORY_SIZE)  {
+                throw new Exception("Unsufficient memory size to load ROM");
+            }
+
             memory[currentMemory] = b;
             currentMemory++;
         }
-        currentGameEnd = currentMemory;
     }
 
     public void increasePC(int n) {
-        programCounter += n;
+        programCounter = (short) ((programCounter & 0xffff) + n);
     }
 
-    public int getPC() {
+    public short getPC() {
         return programCounter;
     }
 
-    public void setPC(int n) {
+    public void setPC(short n) {
         programCounter = n;
     }
 
-    public boolean hasNextInstruction() {
-        return programCounter < currentGameEnd;
+    public byte getByte(int i) {
+        return memory[i];
+    }
+
+    public void setByte(int i, byte b) {
+        memory[i] = b;
     }
 
     public short nextInstruction() {
@@ -43,9 +73,18 @@ public class Memory {
         return instruction;
     }
 
+    private void loadSpritesInReservedMemory() {
+        int i = 0;
+        for (byte[] sprite : DEFAULT_SPRITES) {
+            for (byte b : sprite) {
+                memory[i] = b;
+                i++;
+            }
+        }
+
+    }
+
     private short constructInstruction(byte b1, byte b2) {
-//        System.out.println(Integer.toBinaryString((b1 & 0xff)));
-//        System.out.println(Integer.toBinaryString(b2 & 0xff));
         short combined = (short) ((b1 & 0xff) << 8 | (b2 & 0xff));
         return combined;
     }

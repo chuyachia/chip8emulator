@@ -29,7 +29,7 @@ public enum Instruction {
     SKNP_VX((short) 0xE0A1, (short) 0xF0FF, new short[]{0x0F00}),
     LD_VX_DT((short) 0xF007, (short) 0xF0FF, new short[]{0x0F00}),
     LD_VX_K((short) 0xF00A, (short) 0xF0FF, new short[]{0x0F00}),
-    LD_DT_VX((short) 0xF01A, (short) 0xF0FF, new short[]{0x0F00}),
+    LD_DT_VX((short) 0xF015, (short) 0xF0FF, new short[]{0x0F00}),
     LD_ST_VX((short) 0xF018, (short) 0xF0FF, new short[]{0x0F00}),
     ADD_I_VX((short) 0xF01E, (short) 0xF0FF, new short[]{0x0F00}),
     LD_F_VX((short) 0xF029, (short) 0xF0FF, new short[]{0x0F00}),
@@ -57,13 +57,11 @@ public enum Instruction {
         for (short i = 0; i < valueMasks.length; i++) {
             short argumentValue = (short) (valueMasks[i] & instruction);
             short valueMask = valueMasks[i];
-//            System.out.println(argumentValue);
             // Get rid of trailing zeros
             while (valueMask % 16 == 0 && valueMask > 0) {
                 argumentValue = (short) (argumentValue >>> 4);
                 valueMask = (short) (valueMask >>> 4);
             }
-//            System.out.println(argumentValue);
 
             arguments[i] = argumentValue;
         }

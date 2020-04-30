@@ -1,5 +1,7 @@
 package com.chuyachia.chip8emulator;
 
+import javax.swing.*;
+import java.awt.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,16 +16,30 @@ public class Chip8 {
             e.printStackTrace();
         }
         Memory memory = new Memory();
-        memory.loadGame(rom);
-
-        ProcessingUnit processingUnit = new ProcessingUnit(memory);
-        while (memory.hasNextInstruction()) {
-            processingUnit.instructionCycle();
+        try {
+            memory.loadGame(rom);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+
+        Screen screen = new Screen(memory);
+        prepareJFrameScreen(screen);
+        Keyboard keyboard = new Keyboard();
+        ProcessingUnit processingUnit = new ProcessingUnit(memory, screen,keyboard);
+
+        processingUnit.start();
     }
 
     private static byte[] loadRom() throws IOException {
-        Path path = Paths.get("rom/15PUZZLE");
+        Path path = Paths.get("rom/PONG");
         return Files.readAllBytes(path);
+    }
+
+    private static void prepareJFrameScreen(Screen screen) {
+        JFrame frame = new JFrame();
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.add(screen);
+        frame.setVisible(true);
+        frame.setSize(new Dimension(Screen.WIDTH * Screen.SCALE_FACTOR, Screen.HEIGHT* Screen.SCALE_FACTOR));
     }
 }
