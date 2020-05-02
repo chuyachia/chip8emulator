@@ -1,10 +1,9 @@
 package com.chuyachia.chip8emulator;
 
-import java.awt.*;
 import java.util.Random;
 
 public class ProcessingUnit {
-    private final static int CLOCK_RATE = 540;
+    private final static int CLOCK_RATE = 500;
     private final static int REFRESH_RATE = 60;
     private final static int REFRESH_CYCLE = CLOCK_RATE / REFRESH_RATE;
     private final static long CPU_WAIT_TIME = (1 * 1000 / CLOCK_RATE);
@@ -34,7 +33,7 @@ public class ProcessingUnit {
 
     public void start() {
         int refresh = 0;
-        while (true) {
+        while (!keyboard.escapePressed.get()) {
             refresh++;
             try {
                 instructionCycle();
@@ -54,21 +53,30 @@ public class ProcessingUnit {
                 }
 
                 if (ST > 0) {
-                    Toolkit.getDefaultToolkit().beep();
+//                    Toolkit.getDefaultToolkit().beep();
                     ST--;
                 }
 
                 refresh = 0;
             }
 
-
             try {
                 Thread.sleep(CPU_WAIT_TIME);
             } catch (InterruptedException e) {
                 System.out.println(e.getMessage());
+                end();
                 break;
             }
         }
+
+        end();
+    }
+
+    private void end() {
+        screen.clear();
+        memory.clear();
+        keyboard.clear();
+        screen.backToEmulatorHome();
     }
 
     private void instructionCycle() throws Exception {
@@ -103,7 +111,7 @@ public class ProcessingUnit {
 
         switch (instructionPattern) {
             case CLS:
-                screen.clear();
+                screen.clearDisplay();
                 return;
             case RET:
                 short addr = stack.pop();

@@ -6,6 +6,7 @@ import java.util.Arrays;
 
 public class Screen extends JPanel {
 
+    public final static String PANEL_NAME = "Chip8Screen";
     public static final int SCALE_FACTOR = 10;
     public static final int WIDTH = 64;
     public static final int HEIGHT = 32;
@@ -30,9 +31,9 @@ public class Screen extends JPanel {
 
         while (byteDislayed < nValue) {
             byte currentByte = memory.getByte(memoryStartValue + byteDislayed);
-            int validYValue = (yValue + byteDislayed) % (HEIGHT - 1);
+            int validYValue = (yValue + byteDislayed) % (HEIGHT);
             for (int i = BYTE_SIZE - 1; i >= 0 && (currentByte & 0xff) > 0; i--) {
-                int validXValue = (xValue + i) % (WIDTH - 1);
+                int validXValue = (xValue + i) % (WIDTH);
                 updateBit(validXValue, validYValue, currentByte);
                 currentByte = (byte) ((currentByte & 0xff) >> 1);
             }
@@ -40,17 +41,34 @@ public class Screen extends JPanel {
             byteDislayed++;
         }
 
-        repaintFlag  = true;
+        repaintFlag = true;
     }
 
-    public void clear() {
+    public void clearDisplay() {
         for (byte[] b : pixels) {
             Arrays.fill(b, (byte) 0);
         }
     }
 
+    public void clear() {
+        clearDisplay();
+        collision = false;
+        repaintFlag = false;
+    }
+
+    public void backToEmulatorHome() {
+        Container parentContainer = this.getParent();
+        CardLayout cardLayout = (CardLayout) parentContainer.getLayout();
+        cardLayout.show(parentContainer, Home.PANEL_NAME);
+    }
+
     public boolean shouldRepaint() {
         return repaintFlag;
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+        return new Dimension(WIDTH * SCALE_FACTOR, HEIGHT * SCALE_FACTOR);
     }
 
     @Override
@@ -75,7 +93,7 @@ public class Screen extends JPanel {
             }
         }
 
-        repaintFlag  = false;
+        repaintFlag = false;
     }
 
 
@@ -89,7 +107,7 @@ public class Screen extends JPanel {
         byte leastSignificantBit = (byte) ((b & 0xff) % 2);
         byte update = (byte) ((leastSignificantBit & 0xff) << (BYTE_SIZE - 1 - xModulo));
         byte updatedValue = (byte) ((pixels[y][xCoord] & 0xff) ^ (update & 0xff));
-        if (!collision && ((pixels[y][xCoord] & 0xff)  & (update & 0xff)) != 0) {
+        if (!collision && ((pixels[y][xCoord] & 0xff) & (update & 0xff)) != 0) {
             collision = true;
         }
         pixels[y][xCoord] = updatedValue;

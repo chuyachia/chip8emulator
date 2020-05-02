@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Keyboard {
 
@@ -30,29 +31,36 @@ public class Keyboard {
 
     private short pressed;
     private short lastPressed;
+    public AtomicBoolean escapePressed = new AtomicBoolean();
 
     public Keyboard() {
         KeyboardFocusManager keyboardFocusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 
         keyboardFocusManager.addKeyEventDispatcher((KeyEvent e) -> {
             synchronized (this) {
-                Short key = KEYBOARD_MAP.get(e.getKeyCode());
-                if (key != null) {
-                    lastPressed = key;
-                    switch (e.getID()) {
-                        case KeyEvent.KEY_PRESSED:
-                            pressed |= key;
-                            notify();
-                            return true;
-                        case KeyEvent.KEY_RELEASED:
-                            pressed ^= key;
-                            return true;
-                        default:
-                            return false;
-                    }
-                }
+            if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                // End emulation
+                escapePressed.set(true);
+                return true;
+            }
 
-                return false;
+            Short key = KEYBOARD_MAP.get(e.getKeyCode());
+            if (key != null) {
+                lastPressed = key;
+                notify();
+                switch (e.getID()) {
+                    case KeyEvent.KEY_PRESSED:
+                        pressed |= key;
+                        return true;
+                    case KeyEvent.KEY_RELEASED:
+                        pressed ^= key;
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+
+            return false;
             }
         });
     }
@@ -68,5 +76,11 @@ public class Keyboard {
         int keyValue = key & 0xff;
         short keyValueMask = (short) (1 << keyValue);
         return (pressed & keyValueMask) == keyValueMask;
+    }
+
+
+    public void clear() {
+        pressed = 0;
+        lastPressed = 0;
     }
 }

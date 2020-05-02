@@ -1,5 +1,7 @@
 package com.chuyachia.chip8emulator;
 
+import java.util.Arrays;
+
 public class Memory {
 
     public final static int SPRITE_SIZE = 5;
@@ -33,17 +35,17 @@ public class Memory {
         loadSpritesInReservedMemory();
     }
 
-    public void loadGame(byte[] rom) throws Exception {
+    public void loadGame(byte[] rom)  {
         int currentMemory = MEMORY_START;
 
         for (byte b : rom) {
-            if (currentMemory >= MEMORY_SIZE)  {
-                throw new Exception("Unsufficient memory size to load ROM");
-            }
-
             memory[currentMemory] = b;
             currentMemory++;
         }
+    }
+
+    public int availableMemory() {
+        return MEMORY_SIZE - MEMORY_START;
     }
 
     public void increasePC(int n) {
@@ -71,6 +73,12 @@ public class Memory {
         programCounter++;
 
         return instruction;
+    }
+
+    public void clear() {
+        programCounter = MEMORY_START;
+        Arrays.fill(memory, (byte) 0);
+        loadSpritesInReservedMemory();
     }
 
     private void loadSpritesInReservedMemory() {
