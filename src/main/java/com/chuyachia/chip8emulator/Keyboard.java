@@ -68,7 +68,7 @@ public class Keyboard {
     public byte waitForInput() throws InterruptedException {
         synchronized (this) {
             wait();
-            return (byte) ((lastPressed & 0xffff) / Math.log(2));
+            return (byte) (Math.log(lastPressed & 0xffff) / Math.log(2));
         }
     }
 

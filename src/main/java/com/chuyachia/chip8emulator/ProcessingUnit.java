@@ -1,5 +1,6 @@
 package com.chuyachia.chip8emulator;
 
+import java.awt.*;
 import java.util.Random;
 
 public class ProcessingUnit {
@@ -34,7 +35,6 @@ public class ProcessingUnit {
     public void start() {
         int refresh = 0;
         while (!keyboard.escapePressed.get()) {
-            refresh++;
             try {
                 instructionCycle();
             } catch (Exception e) {
@@ -46,14 +46,13 @@ public class ProcessingUnit {
                 screen.repaint();
             }
 
-            if (refresh >= REFRESH_CYCLE) {
-
+            if (refresh == REFRESH_CYCLE) {
                 if (DT > 0) {
                     DT--;
                 }
 
                 if (ST > 0) {
-//                    Toolkit.getDefaultToolkit().beep();
+                    Toolkit.getDefaultToolkit().beep();
                     ST--;
                 }
 
@@ -67,6 +66,8 @@ public class ProcessingUnit {
                 end();
                 break;
             }
+
+            refresh++;
         }
 
         end();
