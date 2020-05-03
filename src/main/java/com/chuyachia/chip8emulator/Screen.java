@@ -85,10 +85,12 @@ public class Screen extends JPanel {
                 for (int k = 0; k < BYTE_SIZE; k++) {
                     if ((bValue >> k) % 2 == 1) {
                         graphics.setColor(Color.GREEN);
-                        int x = (j * BYTE_SIZE) + (BYTE_SIZE - k - 1);
-                        int y = i;
-                        graphics.fillRect(x * SCALE_FACTOR, y * SCALE_FACTOR, SCALE_FACTOR, SCALE_FACTOR);
+                    } else {
+                        graphics.setColor(Color.BLACK);
                     }
+                    int x = (j * BYTE_SIZE) + (BYTE_SIZE - k - 1);
+                    int y = i;
+                    graphics.fillRect(x * SCALE_FACTOR, y * SCALE_FACTOR, SCALE_FACTOR, SCALE_FACTOR);
                 }
             }
         }

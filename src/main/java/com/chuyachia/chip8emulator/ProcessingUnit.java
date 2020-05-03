@@ -35,6 +35,7 @@ public class ProcessingUnit {
     public void start() {
         int refresh = 0;
         while (!keyboard.escapePressed.get()) {
+            long start = System.currentTimeMillis();
             try {
                 instructionCycle();
             } catch (Exception e) {
@@ -42,11 +43,12 @@ public class ProcessingUnit {
                 break;
             }
 
-            if (screen.shouldRepaint()) {
-                screen.repaint();
-            }
+
 
             if (refresh == REFRESH_CYCLE) {
+                if (screen.shouldRepaint()) {
+                    screen.repaint();
+                }
                 if (DT > 0) {
                     DT--;
                 }
@@ -60,7 +62,7 @@ public class ProcessingUnit {
             }
 
             try {
-                Thread.sleep(CPU_WAIT_TIME);
+                Thread.sleep(Math.max(0,CPU_WAIT_TIME - (System.currentTimeMillis()- start)));
             } catch (InterruptedException e) {
                 System.out.println(e.getMessage());
                 end();

@@ -38,29 +38,27 @@ public class Keyboard {
 
         keyboardFocusManager.addKeyEventDispatcher((KeyEvent e) -> {
             synchronized (this) {
-            if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                // End emulation
-                escapePressed.set(true);
-                return true;
-            }
-
-            Short key = KEYBOARD_MAP.get(e.getKeyCode());
-            if (key != null) {
-                lastPressed = key;
-                notify();
-                switch (e.getID()) {
-                    case KeyEvent.KEY_PRESSED:
-                        pressed |= key;
-                        return true;
-                    case KeyEvent.KEY_RELEASED:
-                        pressed ^= key;
-                        return true;
-                    default:
-                        return false;
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    // End emulation
+                    escapePressed.set(true);
+                    return false;
                 }
-            }
 
-            return false;
+                Short key = KEYBOARD_MAP.get(e.getKeyCode());
+                if (key != null) {
+                    lastPressed = key;
+                    notify();
+                    switch (e.getID()) {
+                        case KeyEvent.KEY_PRESSED:
+                            pressed |= key;
+                            break;
+                        case KeyEvent.KEY_RELEASED:
+                            pressed ^= key;
+                            break;
+                    }
+                }
+
+                return false;
             }
         });
     }
