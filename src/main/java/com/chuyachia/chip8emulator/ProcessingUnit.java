@@ -4,11 +4,12 @@ import java.awt.*;
 import java.util.Random;
 
 public class ProcessingUnit {
-    private final static int CLOCK_RATE = 500;
     private final static int REFRESH_RATE = 60;
-    private final static int REFRESH_CYCLE = CLOCK_RATE / REFRESH_RATE;
-    private final static long CPU_WAIT_TIME = (1 * 1000 / CLOCK_RATE);
+    private final static int DEFAULT_CLOCK_RATE = 500;
 
+    private int clockRate;
+    private int refreshCycle;
+    private long cpuWaitTime;
     // Register
     private final byte[] V;
     // Memory register
@@ -24,6 +25,9 @@ public class ProcessingUnit {
     private final Keyboard keyboard;
 
     public ProcessingUnit(Memory memory, Screen screen, Keyboard keyboard) {
+        this.clockRate = DEFAULT_CLOCK_RATE;
+        this.refreshCycle = clockRate / REFRESH_RATE;
+        this.cpuWaitTime = (1 * 1000 / clockRate);
         this.memory = memory;
         this.screen = screen;
         this.keyboard = keyboard;
@@ -45,7 +49,7 @@ public class ProcessingUnit {
 
 
 
-            if (refresh == REFRESH_CYCLE) {
+            if (refresh == refreshCycle) {
                 if (screen.shouldRepaint()) {
                     screen.repaint();
                 }
@@ -62,7 +66,7 @@ public class ProcessingUnit {
             }
 
             try {
-                Thread.sleep(Math.max(0,CPU_WAIT_TIME - (System.currentTimeMillis()- start)));
+                Thread.sleep(Math.max(0,cpuWaitTime - (System.currentTimeMillis()- start)));
             } catch (InterruptedException e) {
                 System.out.println(e.getMessage());
                 end();
@@ -73,6 +77,12 @@ public class ProcessingUnit {
         }
 
         end();
+    }
+
+    public void setClockRate(int rate) {
+        clockRate = rate;
+        refreshCycle = clockRate / REFRESH_RATE;
+        cpuWaitTime = (1 * 1000 / clockRate);
     }
 
     private void end() {

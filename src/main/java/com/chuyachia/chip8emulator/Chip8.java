@@ -30,4 +30,16 @@ public class Chip8 {
     public Screen getScreen() {
         return screen;
     }
+
+    public int getScreenScaleFactor() {
+        return screen.getScaleFactor();
+    }
+
+    public void setScreenScaleFactor(int factor) {
+        screen.setScaleFactor(factor);
+    }
+
+    public void setClockRate(int rate) {
+        this.processingUnit.setClockRate(rate);
+    }
 }

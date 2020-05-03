@@ -7,10 +7,10 @@ import java.util.Arrays;
 public class Screen extends JPanel {
 
     public final static String PANEL_NAME = "Chip8Screen";
-    public static final int SCALE_FACTOR = 10;
     public static final int WIDTH = 64;
     public static final int HEIGHT = 32;
     public static final int BYTE_SIZE = 8;
+    private int scaleFactor = 10;
     private final byte[][] pixels;
     private final Memory memory;
     private boolean collision;
@@ -68,7 +68,7 @@ public class Screen extends JPanel {
 
     @Override
     public Dimension getPreferredSize() {
-        return new Dimension(WIDTH * SCALE_FACTOR, HEIGHT * SCALE_FACTOR);
+        return new Dimension(WIDTH * scaleFactor, HEIGHT * scaleFactor);
     }
 
     @Override
@@ -76,7 +76,7 @@ public class Screen extends JPanel {
         super.paintComponent(graphics);
 
         graphics.setColor(Color.BLACK);
-        graphics.fillRect(0, 0, WIDTH * SCALE_FACTOR, HEIGHT * SCALE_FACTOR);
+        graphics.fillRect(0, 0, WIDTH * scaleFactor, HEIGHT * scaleFactor);
 
         for (int i = 0; i < HEIGHT; i++) {
             for (int j = 0; j < WIDTH / BYTE_SIZE; j++) {
@@ -90,7 +90,7 @@ public class Screen extends JPanel {
                     }
                     int x = (j * BYTE_SIZE) + (BYTE_SIZE - k - 1);
                     int y = i;
-                    graphics.fillRect(x * SCALE_FACTOR, y * SCALE_FACTOR, SCALE_FACTOR, SCALE_FACTOR);
+                    graphics.fillRect(x * scaleFactor, y * scaleFactor, scaleFactor, scaleFactor);
                 }
             }
         }
@@ -101,6 +101,14 @@ public class Screen extends JPanel {
 
     public boolean erasedPrevious() {
         return collision;
+    }
+
+    public int getScaleFactor() {
+        return scaleFactor;
+    }
+
+    public void setScaleFactor(int value) {
+        this.scaleFactor = value;
     }
 
     private void updateBit(int x, int y, byte b) {
@@ -114,5 +122,6 @@ public class Screen extends JPanel {
         }
         pixels[y][xCoord] = updatedValue;
     }
+
 
 }
