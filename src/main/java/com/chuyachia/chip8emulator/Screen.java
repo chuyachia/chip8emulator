@@ -62,6 +62,31 @@ public class Screen extends JPanel {
         cardLayout.show(parentContainer, Home.PANEL_NAME);
     }
 
+    public byte[][] getPixels() {
+        return pixels;
+    }
+
+    public void setPixels(byte[][] values) {
+        for (int i = 0; i < values.length; i ++) {
+            byte[] row = values[i];
+            for (int j = 0; j < row.length; j++) {
+                this.pixels[i][j] = row[j];
+            }
+        }
+    }
+
+    public boolean getCollision() {
+        return collision;
+    }
+
+    public void setCollision(boolean collision) {
+        this.collision = collision;
+    }
+
+    public void setRepaintFlag(boolean repaintFlag) {
+        this.repaintFlag = repaintFlag;
+    }
+
     public boolean shouldRepaint() {
         return repaintFlag;
     }

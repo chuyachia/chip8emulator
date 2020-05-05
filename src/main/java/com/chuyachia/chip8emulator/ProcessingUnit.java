@@ -1,28 +1,32 @@
 package com.chuyachia.chip8emulator;
 
+import javax.swing.*;
 import java.awt.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.Random;
 
-public class ProcessingUnit {
+public class ProcessingUnit  {
     private final static int REFRESH_RATE = 60;
     private final static int DEFAULT_CLOCK_RATE = 500;
+
+    private final Memory memory;
+    private final Random random;
+    private final Screen screen;
+    private final Keyboard keyboard;
+    private final byte[] V;
+    private final JFileChooser fileChooser = new JFileChooser();
 
     private int clockRate;
     private int refreshCycle;
     private long cpuWaitTime;
-    // Register
-    private final byte[] V;
-    // Memory register
+
     private short I;
-    // Delay timer register
     private byte DT;
-    // Sound timer register
     private byte ST;
-    private final Memory memory;
-    private final Stack stack;
-    private final Random random;
-    private final Screen screen;
-    private final Keyboard keyboard;
+    private Stack stack;
 
     public ProcessingUnit(Memory memory, Screen screen, Keyboard keyboard) {
         this.clockRate = DEFAULT_CLOCK_RATE;
@@ -34,11 +38,19 @@ public class ProcessingUnit {
         V = new byte[16];
         stack = new Stack();
         random = new Random();
+        fileChooser.setDialogTitle("Save");
+        fileChooser.setApproveButtonText("Save");
     }
 
     public void start() {
         int refresh = 0;
+
         while (!keyboard.escapePressed.get()) {
+            if (keyboard.savePressed.get()) {
+                handleSaveState();
+                keyboard.savePressed.set(false);
+            }
+
             long start = System.currentTimeMillis();
             try {
                 instructionCycle();
@@ -46,8 +58,6 @@ public class ProcessingUnit {
                 System.out.println(e.getMessage());
                 break;
             }
-
-
 
             if (refresh == refreshCycle) {
                 if (screen.shouldRepaint()) {
@@ -66,7 +76,7 @@ public class ProcessingUnit {
             }
 
             try {
-                Thread.sleep(Math.max(0,cpuWaitTime - (System.currentTimeMillis()- start)));
+                Thread.sleep(Math.max(0, cpuWaitTime - (System.currentTimeMillis() - start)));
             } catch (InterruptedException e) {
                 System.out.println(e.getMessage());
                 end();
@@ -79,10 +89,63 @@ public class ProcessingUnit {
         end();
     }
 
+    public void setV(byte[] value) {
+        for (int i = 0; i < value.length;i ++) {
+            V[i] = value[i];
+        }
+    }
+
+    public void setI(short value) {
+        I = value;
+    }
+
+    public void setDT(byte value) {
+        DT = value;
+    }
+
+    public void setST(byte value) {
+        ST = value;
+    }
+
+    public void setStack(Stack value) {
+        stack = value;
+    }
+
     public void setClockRate(int rate) {
         clockRate = rate;
         refreshCycle = clockRate / REFRESH_RATE;
         cpuWaitTime = (1 * 1000 / clockRate);
+    }
+
+    private void handleSaveState() {
+        File defaultSavedFile = new File(String.format("./saveFile/chip8_%d.ser", System.currentTimeMillis()));
+        fileChooser.setSelectedFile(defaultSavedFile);
+        int userInteraction = fileChooser.showOpenDialog(screen);
+        if (userInteraction == JFileChooser.APPROVE_OPTION) {
+            File savedFile = fileChooser.getSelectedFile();
+            try {
+                saveState(savedFile);
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(screen, "Something went wrong when saving current emulation state");
+            }
+        }
+    }
+
+    private String saveState(File savedFile) throws IOException {
+        try (FileOutputStream fileOutputStream = new FileOutputStream(savedFile);
+             ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream)) {
+            objectOutputStream.writeObject(V);
+            objectOutputStream.writeObject(I);
+            objectOutputStream.writeObject(DT);
+            objectOutputStream.writeObject(ST);
+            objectOutputStream.writeObject(stack);
+            objectOutputStream.writeObject(memory.getPC());
+            objectOutputStream.writeObject(memory.getMemory());
+            objectOutputStream.writeObject(screen.getPixels());
+            objectOutputStream.writeObject(screen.getCollision());
+        }
+
+        return savedFile.getName();
     }
 
     private void end() {

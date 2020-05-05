@@ -68,6 +68,16 @@ public class Memory {
         memory[i] = b;
     }
 
+    public byte[] getMemory() {
+        return memory;
+    }
+
+    public void setMemory(byte[] values) {
+        for (int i = 0 ; i < values.length; i++) {
+            this.memory[i] = values[i];
+        }
+    }
+
     public short nextInstruction() {
         short instruction = constructInstruction(memory[programCounter], memory[++programCounter]);
         programCounter++;

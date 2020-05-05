@@ -19,8 +19,6 @@ public class Emulator {
         Container container = frame.getContentPane();
         CardLayout cardLayout = new CardLayout();
         container.setLayout(cardLayout);
-
-
         frame.setVisible(true);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         return frame;

@@ -32,15 +32,20 @@ public class Keyboard {
     private short pressed;
     private short lastPressed;
     public AtomicBoolean escapePressed = new AtomicBoolean();
+    public AtomicBoolean savePressed = new AtomicBoolean();
 
     public Keyboard() {
         KeyboardFocusManager keyboardFocusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 
         keyboardFocusManager.addKeyEventDispatcher((KeyEvent e) -> {
             synchronized (this) {
-                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                    // End emulation
+                if (e.getID()== KeyEvent.KEY_PRESSED && e.getKeyCode() == KeyEvent.VK_ESCAPE) {
                     escapePressed.set(true);
+                    return false;
+                }
+
+                if (e.getID()== KeyEvent.KEY_PRESSED && e.getKeyCode() == KeyEvent.VK_SPACE) {
+                    savePressed.set(true);
                     return false;
                 }
 

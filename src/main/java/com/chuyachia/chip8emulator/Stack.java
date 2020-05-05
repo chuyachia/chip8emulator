@@ -1,6 +1,8 @@
 package com.chuyachia.chip8emulator;
 
-public class Stack {
+import java.io.Serializable;
+
+public class Stack implements Serializable {
     private final byte STACK_LEVEL = 16;
     private byte pointer;
     private final short[] stack;
