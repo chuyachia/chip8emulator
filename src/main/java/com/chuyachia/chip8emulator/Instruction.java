@@ -52,6 +52,26 @@ public enum Instruction {
         return (instruction & patternMask) == pattern;
     }
 
+    public static short getNnnn(short[] arguments) {
+        return arguments[0];
+    }
+
+    public static byte getKk(short[] arguments) {
+        return (byte) arguments[1];
+    }
+
+    public static byte getX(short[] arguments) {
+        return (byte) arguments[0];
+    }
+
+    public static byte getY(short[] arguments) {
+        return (byte) arguments[1];
+    }
+
+    public static byte getN(short[] arguments) {
+        return (byte) arguments[2];
+    }
+
     public short[] getArguments(short instruction) {
         short[] arguments = new short[valueMasks.length];
         for (short i = 0; i < valueMasks.length; i++) {

@@ -6,39 +6,29 @@ import java.util.Arrays;
 
 public class Screen extends JPanel {
 
-    public final static String PANEL_NAME = "Chip8Screen";
+    public static final String PANEL_NAME = "Chip8Screen";
     public static final int WIDTH = 64;
     public static final int HEIGHT = 32;
     public static final int BYTE_SIZE = 8;
-    private int scaleFactor = 10;
     private final byte[][] pixels;
-    private final Memory memory;
+    private int scaleFactor = 10;
     private boolean collision;
     private boolean repaintFlag;
 
-    public Screen(Memory memory) {
+    public Screen() {
         this.pixels = new byte[HEIGHT][WIDTH / BYTE_SIZE];
-        this.memory = memory;
     }
 
-    public void display(byte x, byte y, short n, short memoryStart) {
+    public void display(byte x, byte y, byte data, int offset) {
         int xValue = x & 0xff;
         int yValue = y & 0xff;
-        int nValue = n & 0xffff;
-        int memoryStartValue = memoryStart & 0xffff;
-        int byteDislayed = 0;
         collision = false;
 
-        while (byteDislayed < nValue) {
-            byte currentByte = memory.getByte(memoryStartValue + byteDislayed);
-            int validYValue = (yValue + byteDislayed) % (HEIGHT);
-            for (int i = BYTE_SIZE - 1; i >= 0 && (currentByte & 0xff) > 0; i--) {
-                int validXValue = (xValue + i) % (WIDTH);
-                updateBit(validXValue, validYValue, currentByte);
-                currentByte = (byte) ((currentByte & 0xff) >> 1);
-            }
-
-            byteDislayed++;
+        int validYValue = (yValue + offset) % (HEIGHT);
+        for (int i = BYTE_SIZE - 1; i >= 0 && (data & 0xff) > 0; i--) {
+            int validXValue = (xValue + i) % (WIDTH);
+            updateBit(validXValue, validYValue, data);
+            data = (byte) ((data & 0xff) >>> 1);
         }
 
         repaintFlag = true;
@@ -108,7 +98,7 @@ public class Screen extends JPanel {
                 byte b = pixels[i][j];
                 int bValue = b & 0xff;
                 for (int k = 0; k < BYTE_SIZE; k++) {
-                    if ((bValue >> k) % 2 == 1) {
+                    if ((bValue >>> k) % 2 == 1) {
                         graphics.setColor(Color.GREEN);
                     } else {
                         graphics.setColor(Color.BLACK);

@@ -16,17 +16,22 @@ public class ProcessingUnit  {
     private final Random random;
     private final Screen screen;
     private final Keyboard keyboard;
+    // 16 8 bits general purpose registers
     private final byte[] V;
+    // 16 bits register I
+    private short I;
+    // Delay timer register
+    private byte DT;
+    // Sound timer register
+    private byte ST;
+    private Stack stack;
+
     private final JFileChooser fileChooser = new JFileChooser();
 
     private int clockRate;
     private int refreshCycle;
     private long cpuWaitTime;
 
-    private short I;
-    private byte DT;
-    private byte ST;
-    private Stack stack;
 
     public ProcessingUnit(Memory memory, Screen screen, Keyboard keyboard) {
         this.clockRate = DEFAULT_CLOCK_RATE;
@@ -53,7 +58,7 @@ public class ProcessingUnit  {
 
             long start = System.currentTimeMillis();
             try {
-                instructionCycle();
+                runInstructionCycle();
             } catch (Exception e) {
                 System.out.println(e.getMessage());
                 break;
@@ -114,11 +119,11 @@ public class ProcessingUnit  {
     public void setClockRate(int rate) {
         clockRate = rate;
         refreshCycle = clockRate / REFRESH_RATE;
-        cpuWaitTime = (1 * 1000 / clockRate);
+        cpuWaitTime = (1 * 1000) / clockRate;
     }
 
     private void handleSaveState() {
-        File defaultSavedFile = new File(String.format("./saveFile/chip8_%d.ser", System.currentTimeMillis()));
+        File defaultSavedFile = new File(String.format("chip8_%d.ser", System.currentTimeMillis()));
         fileChooser.setSelectedFile(defaultSavedFile);
         int userInteraction = fileChooser.showOpenDialog(screen);
         if (userInteraction == JFileChooser.APPROVE_OPTION) {
@@ -155,7 +160,7 @@ public class ProcessingUnit  {
         screen.backToEmulatorHome();
     }
 
-    private void instructionCycle() throws Exception {
+    private void runInstructionCycle() throws Exception {
         short instruction = fetch();
         Instruction instructionPattern = decode(instruction);
         execute(instruction, instructionPattern);
@@ -194,151 +199,130 @@ public class ProcessingUnit  {
                 memory.setPC(addr);
                 return;
             case JP_ADDR:
-                memory.setPC(arguments[0]);
+                jumpToNnnn(arguments);
                 return;
             case CALL_ADDR:
-                stack.push(memory.getPC());
-                memory.setPC(arguments[0]);
+                goToNnnn(arguments);
                 return;
 
             case SE_VX:
-                if (compareVxkk(arguments[0], arguments[1]) == 0) {
-                    memory.increasePC(2);
-                }
+                skipIfVxKKEqual(arguments);
                 return;
 
             case SNE_VX:
-                if (compareVxkk(arguments[0], arguments[1]) != 0) {
-                    memory.increasePC(2);
-                }
+                skipIfVxKKNotEqual(arguments);
                 return;
 
             case SE_VX_VY:
-                if (compareVxVy(arguments[0], arguments[1]) == 0) {
-                    memory.increasePC(2);
-                }
+                skipIfVxVyEqual(arguments);
                 return;
 
             case LD_VX:
-                V[arguments[0]] = (byte) (shortToIntValue(arguments[1]));
+                setVxToKk(arguments);
                 return;
 
             case ADD_VX:
-                V[arguments[0]] = (byte) (byteToIntValue(V[arguments[0]]) + shortToIntValue(arguments[1]));
+                addKkToVx(arguments);
                 return;
 
             case LD_VX_VY:
-                V[arguments[0]] = V[arguments[1]];
+                storeVyValueInVx(arguments);
                 return;
 
             case OR_VX_VY:
-                V[arguments[0]] = (byte) (byteToIntValue(V[arguments[0]]) | byteToIntValue(V[arguments[1]]));
+                orVxVy(arguments);
                 return;
 
             case AND_VX_VY:
-                V[arguments[0]] = (byte) (byteToIntValue(V[arguments[0]]) & byteToIntValue(V[arguments[1]]));
+                andVxVy(arguments);
                 return;
 
             case XOR_VX_VY:
-                V[arguments[0]] = (byte) (byteToIntValue(V[arguments[0]]) ^ byteToIntValue(V[arguments[1]]));
+                xorVxVy(arguments);
                 return;
 
             case ADD_VX_VY:
-                int sum = byteToIntValue(V[arguments[0]]) + byteToIntValue(V[arguments[1]]);
-                V[0xf] = sum > 255 ? (byte) 1 : (byte) 0;
-                V[arguments[0]] = (byte) (sum & 0xff);
+                addVxVy(arguments);
                 return;
 
             case SUB_VX_VY:
-                V[0xf] = compareVxVy(arguments[0], arguments[1]) > 0 ? (byte) 1 : (byte) 0;
-                V[arguments[0]] = (byte) (byteToIntValue(V[arguments[0]]) - byteToIntValue(V[arguments[1]]));
+                subVxVy(arguments);
                 return;
 
             case SHR_VX_VY:
-                V[0xf] = leastSignificatBit(V[arguments[0]]);
-                V[arguments[0]] = (byte) (byteToIntValue(V[arguments[0]]) >>> 1);
+                rightShiftVx(arguments);
                 return;
 
             case SUBN_VX_VY:
-                V[0xf] = compareVxVy(arguments[0], arguments[1]) < 0 ? (byte) 1 : (byte) 0;
-                V[arguments[0]] = (byte) (byteToIntValue(V[arguments[1]]) - byteToIntValue(V[arguments[0]]));
+                subVyVx(arguments);
                 return;
 
             case SHL_VX_VY:
-                V[0xf] = mostSignificatBit(V[arguments[0]]) != 0 ? (byte) 1 : (byte) 0;
-                V[arguments[0]] = (byte) (byteToIntValue(V[arguments[0]]) << 1);
+                leftShiftVx(arguments);
                 return;
 
             case SNE_VX_VY:
-                if (compareVxVy(arguments[0], arguments[1]) != 0) {
-                    memory.increasePC(2);
-                }
+                skipIfVxVyNotEqual(arguments);
                 return;
 
             case LD_I_ADDR:
-                I = arguments[0];
+                setIToNnnn(arguments);
                 return;
 
             case JP_V0_ADDR:
-                memory.setPC((short) (shortToIntValue(arguments[0]) + byteToIntValue(V[0])));
+                jumpToNnnnPlusV0(arguments);
                 return;
 
             case RND_VX:
-                int rand = random.nextInt(256);
-                V[arguments[0]] = (byte) (rand & shortToIntValue(arguments[1]));
+                randomByteAndKk(arguments);
                 return;
 
             case DRW_VX_VY:
-                screen.display(V[arguments[0]], V[arguments[1]], arguments[2], I);
-                V[0xf] = screen.erasedPrevious() ? (byte) 1 : (byte) 0;
+                displayOnScreen(arguments);
                 return;
 
             case SKP_VX:
-                if (keyboard.isPressed(V[arguments[0]])) {
-                    memory.increasePC(2);
-                }
+                skipIfKeyVxPressed(arguments);
                 return;
 
             case SKNP_VX:
-                if (!keyboard.isPressed(V[arguments[0]])) {
-                    memory.increasePC(2);
-                }
+                skipIfKeyVxNotPressed(arguments);
                 return;
 
             case LD_VX_DT:
-                V[arguments[0]] = DT;
+                setVxToDT(arguments);
                 return;
 
             case LD_VX_K:
-                V[arguments[0]] = keyboard.waitForInput();
+                setVxToKeyInput(arguments);
                 return;
 
             case LD_DT_VX:
-                DT = V[arguments[0]];
+                setDTtoVx(arguments);
                 return;
 
             case LD_ST_VX:
-                ST = V[arguments[0]];
+                setSTtoVx(arguments);
                 return;
 
             case ADD_I_VX:
-                I = (short) (shortToIntValue(I) + byteToIntValue(V[arguments[0]]));
+                addIVx(arguments);
                 return;
 
             case LD_F_VX:
-                I = (short) (byteToIntValue(V[arguments[0]]) * Memory.SPRITE_SIZE);
+                setISpriteVx(arguments);
                 return;
 
             case LD_B_VX:
-                storeBCDRepresentation(V[arguments[0]]);
+                storeVxBCDRepresentation(arguments);
                 return;
 
             case LD_I_VX:
-                storeRegisterIntoMemory(shortToIntValue(arguments[0]));
+                storeRegisterV0ToVx(arguments);
                 return;
 
             case LD_VX_I:
-                readMemoryIntoRegister(shortToIntValue(arguments[0]));
+                readToRegisterV0ToVx(arguments);
                 return;
 
             default:
@@ -347,16 +331,308 @@ public class ProcessingUnit  {
         }
     }
 
-    private int compareVxkk(short x, short kk) {
-        byte vx = V[x];
+    private void jumpToNnnn(short[] arguments) {
+        short nnnn = Instruction.getNnnn(arguments);
 
-        return Byte.compare(vx, (byte) kk);
+        memory.setPC(nnnn);
     }
 
-    private int compareVxVy(short x, short y) {
+    private void goToNnnn(short[] arguments) throws Exception {
+        short nnnn = Instruction.getNnnn(arguments);
+
+        stack.push(memory.getPC());
+        memory.setPC(nnnn);
+    }
+
+    private void skipIfVxKKEqual(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        byte kk = Instruction.getKk(arguments);
+        byte vx = V[x];
+
+        if (vx == kk) {
+            memory.increasePC(2);
+        }
+    }
+
+    private void skipIfVxKKNotEqual(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        byte kk = Instruction.getKk(arguments);
+        byte vx = V[x];
+
+        if (vx != kk) {
+            memory.increasePC(2);
+        }
+    }
+
+    private void skipIfVxVyEqual(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        byte y = Instruction.getY(arguments);
         byte vx = V[x];
         byte vy = V[y];
-        return Byte.compare(vx, vy);
+
+        if (vx == vy) {
+            memory.increasePC(2);
+        }
+    }
+
+    private void setVxToKk(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        byte kk = Instruction.getKk(arguments);
+        V[x] = kk;
+    }
+
+    private void addKkToVx(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        byte kk = Instruction.getKk(arguments);
+
+        V[x] = (byte) (V[x] + kk);
+    }
+
+    private void storeVyValueInVx(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        byte y = Instruction.getY(arguments);
+
+        V[x] = V[y];
+    }
+
+    private void orVxVy(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        byte y = Instruction.getY(arguments);
+
+        V[x] = (byte) (V[x] | V[y]);
+    }
+
+    private void andVxVy(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        byte y = Instruction.getY(arguments);
+
+        V[x] = (byte) (V[x] & V[y]);
+    }
+
+    private void xorVxVy(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        byte y = Instruction.getY(arguments);
+
+        V[x] = (byte) (V[x] ^ V[y]);
+    }
+
+
+    private void addVxVy(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        byte y = Instruction.getY(arguments);
+
+        byte sum = (byte) (V[x] + V[y]);
+        int sumValue = byteToIntValue(sum);
+        int vxValue = byteToIntValue(V[x]);
+        int vyValue = byteToIntValue(V[y]);
+
+        if (sumValue < vxValue || sumValue < vyValue) {
+            // If sum is smaller than vx or vy value, there's overflow
+            V[0xf] = (byte) 1;
+        } else {
+            V[0xf] = (byte) 0;
+        }
+
+        V[x] = sum;
+    }
+
+    private void subVxVy(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        byte y = Instruction.getY(arguments);
+
+        byte diff = (byte) (V[x] - V[y]);
+
+        int vxValue = byteToIntValue(V[x]);
+        int vyValue = byteToIntValue(V[y]);
+
+        if (vxValue > vyValue) {
+            V[0xf] = (byte) 1;
+        } else {
+            V[0xf] = (byte) 0;
+        }
+
+        V[x] = diff;
+    }
+
+    private void rightShiftVx(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+
+        V[0xf] = (byte) (V[x]& 0x01);
+        V[x] = (byte) (byteToIntValue(V[x]) >>> 1);
+    }
+
+    private void subVyVx(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        byte y = Instruction.getY(arguments);
+
+        byte diff = (byte) (V[y] - V[x]);
+
+        int vxValue = byteToIntValue(V[x]);
+        int vyValue = byteToIntValue(V[y]);
+
+        if (vyValue > vxValue) {
+            V[0xf] = (byte) 1;
+        } else {
+            V[0xf] = (byte) 0;
+        }
+
+        V[x] = diff;
+    }
+
+    private void leftShiftVx(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+
+        byte mostSignificant = (byte) (V[x] & 0x80);
+
+        if (mostSignificant != 0) {
+            V[0xf] = (byte) 1;
+        } else {
+            V[0xf] = (byte) 0;
+        }
+
+        V[x] = (byte) (byteToIntValue(V[x]) << 1);
+    }
+
+    private void skipIfVxVyNotEqual(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        byte y = Instruction.getY(arguments);
+        byte vx = V[x];
+        byte vy = V[y];
+
+        if (vx != vy) {
+            memory.increasePC(2);
+        }
+    }
+
+    private void setIToNnnn(short[] arguments) {
+        short nnnn = Instruction.getNnnn(arguments);
+        I = nnnn;
+    }
+
+    private void jumpToNnnnPlusV0(short[] arguments) {
+        short nnnn = Instruction.getNnnn(arguments);
+
+        memory.setPC((short) (shortToIntValue(nnnn) + byteToIntValue(V[0])));
+    }
+
+    private void randomByteAndKk(short[] arguments) {
+        byte x = Instruction.getKk(arguments);
+        byte kk = Instruction.getKk(arguments);
+
+        byte rand = (byte) random.nextInt(256);
+        V[arguments[0]] = (byte) (rand & kk);
+    }
+
+    private void displayOnScreen(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        byte y = Instruction.getY(arguments);
+        byte n = Instruction.getN(arguments);
+
+        int byteDislayed = 0;
+        int nValue = shortToIntValue(n);
+        int memoryStartValue = shortToIntValue(I);
+
+        while (byteDislayed < nValue) {
+            byte currentByte = memory.getByte(memoryStartValue + byteDislayed);
+            screen.display(V[x], V[y], currentByte, byteDislayed);
+            byteDislayed++;
+        }
+
+        V[0xf] = screen.erasedPrevious() ? (byte) 1 : (byte) 0;
+    }
+
+    private void skipIfKeyVxPressed(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+
+        if (keyboard.isPressed(V[x])) {
+            memory.increasePC(2);
+        }
+    }
+
+    private void skipIfKeyVxNotPressed(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+
+        if (!keyboard.isPressed(V[x])) {
+            memory.increasePC(2);
+        }
+    }
+
+    private void setVxToDT(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+
+        V[x] = DT;
+    }
+
+    private void setVxToKeyInput(short[] arguments) throws InterruptedException {
+        byte x = Instruction.getX(arguments);
+
+        V[x] = keyboard.waitForInput();
+    }
+
+    private void setDTtoVx(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+
+        DT = V[x];
+    }
+
+    private void setSTtoVx(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+
+        ST = V[x];
+    }
+
+    private void addIVx(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+
+        I = (short) (shortToIntValue(I) + byteToIntValue(V[x]));
+    }
+
+    private void setISpriteVx(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+
+        I = (short) (byteToIntValue(V[x]) * Memory.SPRITE_SIZE);
+    }
+
+    private void storeVxBCDRepresentation(short[] arguments) {
+        // Takes the decimal value of Vx, and
+        // places the hundreds digit in memory at location in I,
+        // the tens digit at location I+1,
+        // and the ones digit at location I+2
+        byte x = Instruction.getX(arguments);
+
+        int vXValue = byteToIntValue(V[x]);
+        int power = 100;
+
+        for (int i = 2; i >= 0 & vXValue > 0; i--) {
+            int digit = vXValue / power;
+            memory.setByte(shortToIntValue(I) + (2 - i), (byte) digit);
+            vXValue -= digit * power;
+            power /= 10;
+        }
+    }
+
+    private void storeRegisterV0ToVx(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        int to = byteToIntValue(x);
+
+        int memoryStart = shortToIntValue(I);
+        for (int i = 0; i <= to; i++) {
+            byte b = V[i];
+            memory.setByte(memoryStart, b);
+            memoryStart++;
+        }
+    }
+
+    private void readToRegisterV0ToVx(short[] arguments) {
+        byte x = Instruction.getX(arguments);
+        int to = byteToIntValue(x);
+
+        int register = 0;
+        int memoryStart = shortToIntValue(I);
+        while (register <= to) {
+            V[register] = memory.getByte(memoryStart + register);
+            register++;
+        }
     }
 
     private int byteToIntValue(byte b) {
@@ -366,40 +642,4 @@ public class ProcessingUnit  {
     private int shortToIntValue(short s) {
         return s & 0xffff;
     }
-
-    private byte leastSignificatBit(byte b) {
-        return (byte) (b & 0x01);
-    }
-
-    private byte mostSignificatBit(byte b) {
-        return (byte) (b & 0x80);
-    }
-
-    private void storeBCDRepresentation(byte b) {
-        int intValue = byteToIntValue(b);
-        for (int i = 2; i >= 0 & intValue > 0; i--) {
-            byte digit = (byte) Math.floor(intValue / Math.pow(10, i));
-            memory.setByte(shortToIntValue(I) + (2 - i), digit);
-            intValue = (int) (intValue % (Math.pow(10, i)));
-        }
-    }
-
-    private void storeRegisterIntoMemory(int to) {
-        int memoryStart = shortToIntValue(I);
-        for (int i = 0; i <= to; i++) {
-            byte b = V[i];
-            memory.setByte(memoryStart, b);
-            memoryStart++;
-        }
-    }
-
-    private void readMemoryIntoRegister(int to) {
-        int register = 0;
-        int memoryStart = shortToIntValue(I);
-        while (register <= to) {
-            V[register] = memory.getByte(memoryStart + register);
-            register++;
-        }
-    }
-
 }

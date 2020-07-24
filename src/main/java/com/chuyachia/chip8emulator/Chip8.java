@@ -15,7 +15,7 @@ public class Chip8 {
 
     public Chip8() {
         memory = new Memory();
-        screen = new Screen(memory);
+        screen = new Screen();
         keyboard = new Keyboard();
         processingUnit = new ProcessingUnit(memory, screen, keyboard);
     }
