@@ -11,6 +11,7 @@ import java.util.Random;
 public class ProcessingUnit  {
     private final static int REFRESH_RATE = 60;
     private final static int DEFAULT_CLOCK_RATE = 500;
+    private final static int GENERAL_REGISTERS_NUMBER = 16;
 
     private final Memory memory;
     private final Random random;
@@ -40,7 +41,7 @@ public class ProcessingUnit  {
         this.memory = memory;
         this.screen = screen;
         this.keyboard = keyboard;
-        V = new byte[16];
+        V = new byte[GENERAL_REGISTERS_NUMBER];
         stack = new Stack();
         random = new Random();
         fileChooser.setDialogTitle("Save");
@@ -94,29 +95,29 @@ public class ProcessingUnit  {
         end();
     }
 
-    public void setV(byte[] value) {
-        for (int i = 0; i < value.length;i ++) {
+    void setV(byte[] value) {
+        for (int i = 0; i < GENERAL_REGISTERS_NUMBER;i ++) {
             V[i] = value[i];
         }
     }
 
-    public void setI(short value) {
+    void setI(short value) {
         I = value;
     }
 
-    public void setDT(byte value) {
+    void setDT(byte value) {
         DT = value;
     }
 
-    public void setST(byte value) {
+    void setST(byte value) {
         ST = value;
     }
 
-    public void setStack(Stack value) {
+    void setStack(Stack value) {
         stack = value;
     }
 
-    public void setClockRate(int rate) {
+    void setClockRate(int rate) {
         clockRate = rate;
         refreshCycle = clockRate / REFRESH_RATE;
         cpuWaitTime = (1 * 1000) / clockRate;
@@ -172,13 +173,7 @@ public class ProcessingUnit  {
     }
 
     private Instruction decode(short instruction) throws Exception {
-        Instruction instructionPattern = null;
-        for (Instruction existingInstruction : Instruction.values()) {
-            if (existingInstruction.match(instruction)) {
-                instructionPattern = existingInstruction;
-                break;
-            }
-        }
+        Instruction instructionPattern = Instruction.getMatched(instruction);
 
         if (instructionPattern == null) {
             throw new Exception(String.format("Unknown instruction encountered %s", Integer.toHexString(instruction & 0xffff)));
@@ -189,6 +184,8 @@ public class ProcessingUnit  {
 
     private void execute(short instruction, Instruction instructionPattern) throws Exception {
         short[] arguments = instructionPattern.getArguments(instruction);
+        byte x, y, n , kk;
+        short nnnn;
 
         switch (instructionPattern) {
             case CLS:
@@ -199,130 +196,178 @@ public class ProcessingUnit  {
                 memory.setPC(addr);
                 return;
             case JP_ADDR:
-                jumpToNnnn(arguments);
+                nnnn = Instruction.getNnnn(arguments);
+                jumpToNnnn(nnnn);
                 return;
             case CALL_ADDR:
-                goToNnnn(arguments);
+                nnnn = Instruction.getNnnn(arguments);
+                goToNnnn(nnnn);
                 return;
 
             case SE_VX:
-                skipIfVxKKEqual(arguments);
+                x = Instruction.getX(arguments);
+                kk = Instruction.getKk(arguments);
+                skipIfVxKKEqual(x, kk);
                 return;
 
             case SNE_VX:
-                skipIfVxKKNotEqual(arguments);
+                x = Instruction.getX(arguments);
+                kk = Instruction.getKk(arguments);
+                skipIfVxKKNotEqual(x, kk);
                 return;
 
             case SE_VX_VY:
-                skipIfVxVyEqual(arguments);
+                x = Instruction.getX(arguments);
+                y = Instruction.getY(arguments);
+                skipIfVxVyEqual(x, y);
                 return;
 
             case LD_VX:
-                setVxToKk(arguments);
+                x = Instruction.getX(arguments);
+                kk = Instruction.getKk(arguments);
+                setVxToKk(x, kk);
                 return;
 
             case ADD_VX:
-                addKkToVx(arguments);
+                x = Instruction.getX(arguments);
+                kk = Instruction.getKk(arguments);
+                addKkToVx(x, kk);
                 return;
 
             case LD_VX_VY:
-                storeVyValueInVx(arguments);
+                x = Instruction.getX(arguments);
+                y = Instruction.getY(arguments);
+                storeVyValueInVx(x, y);
                 return;
 
             case OR_VX_VY:
-                orVxVy(arguments);
+                x = Instruction.getX(arguments);
+                y = Instruction.getY(arguments);
+                orVxVy(x, y);
                 return;
 
             case AND_VX_VY:
-                andVxVy(arguments);
+                x = Instruction.getX(arguments);
+                y = Instruction.getY(arguments);
+                andVxVy(x, y);
                 return;
 
             case XOR_VX_VY:
-                xorVxVy(arguments);
+                x = Instruction.getX(arguments);
+                y = Instruction.getY(arguments);
+                xorVxVy(x, y);
                 return;
 
             case ADD_VX_VY:
-                addVxVy(arguments);
+                x = Instruction.getX(arguments);
+                y = Instruction.getY(arguments);
+                addVxVy(x, y);
                 return;
 
             case SUB_VX_VY:
-                subVxVy(arguments);
+                x = Instruction.getX(arguments);
+                y = Instruction.getY(arguments);
+                subVxVy(x, y);
                 return;
 
             case SHR_VX_VY:
-                rightShiftVx(arguments);
+                x = Instruction.getX(arguments);
+                rightShiftVx(x);
                 return;
 
             case SUBN_VX_VY:
-                subVyVx(arguments);
+                x = Instruction.getX(arguments);
+                y = Instruction.getY(arguments);
+                subVyVx(x, y);
                 return;
 
             case SHL_VX_VY:
-                leftShiftVx(arguments);
+                x = Instruction.getX(arguments);
+                leftShiftVx(x);
                 return;
 
             case SNE_VX_VY:
-                skipIfVxVyNotEqual(arguments);
+                x = Instruction.getX(arguments);
+                y = Instruction.getY(arguments);
+                skipIfVxVyNotEqual(x, y);
                 return;
 
             case LD_I_ADDR:
-                setIToNnnn(arguments);
+                nnnn = Instruction.getNnnn(arguments);
+                setIToNnnn(nnnn);
                 return;
 
             case JP_V0_ADDR:
-                jumpToNnnnPlusV0(arguments);
+                nnnn = Instruction.getNnnn(arguments);
+                jumpToNnnnPlusV0(nnnn);
                 return;
 
             case RND_VX:
-                randomByteAndKk(arguments);
+                x = Instruction.getX(arguments);
+                kk = Instruction.getKk(arguments);
+                randomByteAndKk(x, kk);
                 return;
 
             case DRW_VX_VY:
-                displayOnScreen(arguments);
+                x = Instruction.getX(arguments);
+                y = Instruction.getY(arguments);
+                n = Instruction.getN(arguments);
+                displayOnScreen(x, y , n);
                 return;
 
             case SKP_VX:
-                skipIfKeyVxPressed(arguments);
+                x = Instruction.getX(arguments);
+                skipIfKeyVxPressed(x);
                 return;
 
             case SKNP_VX:
-                skipIfKeyVxNotPressed(arguments);
+                x = Instruction.getX(arguments);
+                skipIfKeyVxNotPressed(x);
                 return;
 
             case LD_VX_DT:
-                setVxToDT(arguments);
+                x = Instruction.getX(arguments);
+                setVxToDT(x);
                 return;
 
             case LD_VX_K:
-                setVxToKeyInput(arguments);
+                x = Instruction.getX(arguments);
+                setVxToKeyInput(x);
                 return;
 
             case LD_DT_VX:
-                setDTtoVx(arguments);
+                x = Instruction.getX(arguments);
+                setDTtoVx(x);
                 return;
 
             case LD_ST_VX:
-                setSTtoVx(arguments);
+                x = Instruction.getX(arguments);
+                setSTtoVx(x);
                 return;
 
             case ADD_I_VX:
-                addIVx(arguments);
+                x = Instruction.getX(arguments);
+                addIVx(x);
                 return;
 
             case LD_F_VX:
-                setISpriteVx(arguments);
+                x = Instruction.getX(arguments);
+                setISpriteVx(x);
                 return;
 
             case LD_B_VX:
-                storeVxBCDRepresentation(arguments);
+                x = Instruction.getX(arguments);
+                storeVxBCDRepresentation(x);
                 return;
 
             case LD_I_VX:
-                storeRegisterV0ToVx(arguments);
+                x = Instruction.getX(arguments);
+                storeRegisterV0ToVx(x);
                 return;
 
             case LD_VX_I:
-                readToRegisterV0ToVx(arguments);
+                x = Instruction.getX(arguments);
+                readToRegisterV0ToVx(x);
                 return;
 
             default:
@@ -331,22 +376,16 @@ public class ProcessingUnit  {
         }
     }
 
-    private void jumpToNnnn(short[] arguments) {
-        short nnnn = Instruction.getNnnn(arguments);
-
+    void jumpToNnnn(short nnnn) {
         memory.setPC(nnnn);
     }
 
-    private void goToNnnn(short[] arguments) throws Exception {
-        short nnnn = Instruction.getNnnn(arguments);
-
+    void goToNnnn(short nnnn) throws Exception {
         stack.push(memory.getPC());
         memory.setPC(nnnn);
     }
 
-    private void skipIfVxKKEqual(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-        byte kk = Instruction.getKk(arguments);
+    void skipIfVxKKEqual(byte x, byte kk) {
         byte vx = V[x];
 
         if (vx == kk) {
@@ -354,9 +393,7 @@ public class ProcessingUnit  {
         }
     }
 
-    private void skipIfVxKKNotEqual(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-        byte kk = Instruction.getKk(arguments);
+    void skipIfVxKKNotEqual(byte x, byte kk) {
         byte vx = V[x];
 
         if (vx != kk) {
@@ -364,9 +401,7 @@ public class ProcessingUnit  {
         }
     }
 
-    private void skipIfVxVyEqual(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-        byte y = Instruction.getY(arguments);
+    void skipIfVxVyEqual(byte x, byte y) {
         byte vx = V[x];
         byte vy = V[y];
 
@@ -375,52 +410,32 @@ public class ProcessingUnit  {
         }
     }
 
-    private void setVxToKk(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-        byte kk = Instruction.getKk(arguments);
+    void setVxToKk(byte x, byte kk) {
         V[x] = kk;
     }
 
-    private void addKkToVx(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-        byte kk = Instruction.getKk(arguments);
-
+    void addKkToVx(byte x, byte kk) {
         V[x] = (byte) (V[x] + kk);
     }
 
-    private void storeVyValueInVx(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-        byte y = Instruction.getY(arguments);
-
+    void storeVyValueInVx(byte x, byte y) {
         V[x] = V[y];
     }
 
-    private void orVxVy(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-        byte y = Instruction.getY(arguments);
-
+    void orVxVy(byte x, byte y) {
         V[x] = (byte) (V[x] | V[y]);
     }
 
-    private void andVxVy(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-        byte y = Instruction.getY(arguments);
-
+    void andVxVy(byte x, byte y) {
         V[x] = (byte) (V[x] & V[y]);
     }
 
-    private void xorVxVy(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-        byte y = Instruction.getY(arguments);
-
+    void xorVxVy(byte x, byte y) {
         V[x] = (byte) (V[x] ^ V[y]);
     }
 
 
-    private void addVxVy(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-        byte y = Instruction.getY(arguments);
-
+    void addVxVy(byte x, byte y) {
         byte sum = (byte) (V[x] + V[y]);
         int sumValue = byteToIntValue(sum);
         int vxValue = byteToIntValue(V[x]);
@@ -436,10 +451,7 @@ public class ProcessingUnit  {
         V[x] = sum;
     }
 
-    private void subVxVy(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-        byte y = Instruction.getY(arguments);
-
+    void subVxVy(byte x, byte y) {
         byte diff = (byte) (V[x] - V[y]);
 
         int vxValue = byteToIntValue(V[x]);
@@ -454,17 +466,12 @@ public class ProcessingUnit  {
         V[x] = diff;
     }
 
-    private void rightShiftVx(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-
+    void rightShiftVx(byte x) {
         V[0xf] = (byte) (V[x]& 0x01);
         V[x] = (byte) (byteToIntValue(V[x]) >>> 1);
     }
 
-    private void subVyVx(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-        byte y = Instruction.getY(arguments);
-
+    void subVyVx(byte x, byte y) {
         byte diff = (byte) (V[y] - V[x]);
 
         int vxValue = byteToIntValue(V[x]);
@@ -479,9 +486,7 @@ public class ProcessingUnit  {
         V[x] = diff;
     }
 
-    private void leftShiftVx(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-
+    void leftShiftVx(byte x) {
         byte mostSignificant = (byte) (V[x] & 0x80);
 
         if (mostSignificant != 0) {
@@ -493,9 +498,7 @@ public class ProcessingUnit  {
         V[x] = (byte) (byteToIntValue(V[x]) << 1);
     }
 
-    private void skipIfVxVyNotEqual(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-        byte y = Instruction.getY(arguments);
+    void skipIfVxVyNotEqual(byte x, byte y) {
         byte vx = V[x];
         byte vy = V[y];
 
@@ -504,30 +507,20 @@ public class ProcessingUnit  {
         }
     }
 
-    private void setIToNnnn(short[] arguments) {
-        short nnnn = Instruction.getNnnn(arguments);
+    void setIToNnnn(short nnnn) {
         I = nnnn;
     }
 
-    private void jumpToNnnnPlusV0(short[] arguments) {
-        short nnnn = Instruction.getNnnn(arguments);
-
+    void jumpToNnnnPlusV0(short nnnn) {
         memory.setPC((short) (shortToIntValue(nnnn) + byteToIntValue(V[0])));
     }
 
-    private void randomByteAndKk(short[] arguments) {
-        byte x = Instruction.getKk(arguments);
-        byte kk = Instruction.getKk(arguments);
-
+    void randomByteAndKk(byte x, byte kk) {
         byte rand = (byte) random.nextInt(256);
-        V[arguments[0]] = (byte) (rand & kk);
+        V[x] = (byte) (rand & kk);
     }
 
-    private void displayOnScreen(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-        byte y = Instruction.getY(arguments);
-        byte n = Instruction.getN(arguments);
-
+    void displayOnScreen(byte x, byte y, byte n) {
         int byteDislayed = 0;
         int nValue = shortToIntValue(n);
         int memoryStartValue = shortToIntValue(I);
@@ -541,65 +534,47 @@ public class ProcessingUnit  {
         V[0xf] = screen.erasedPrevious() ? (byte) 1 : (byte) 0;
     }
 
-    private void skipIfKeyVxPressed(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-
+    void skipIfKeyVxPressed(byte x) {
         if (keyboard.isPressed(V[x])) {
             memory.increasePC(2);
         }
     }
 
-    private void skipIfKeyVxNotPressed(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-
+    void skipIfKeyVxNotPressed(byte x) {
         if (!keyboard.isPressed(V[x])) {
             memory.increasePC(2);
         }
     }
 
-    private void setVxToDT(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-
+    void setVxToDT(byte x) {
         V[x] = DT;
     }
 
-    private void setVxToKeyInput(short[] arguments) throws InterruptedException {
-        byte x = Instruction.getX(arguments);
-
+    void setVxToKeyInput(byte x) throws InterruptedException {
         V[x] = keyboard.waitForInput();
     }
 
-    private void setDTtoVx(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-
+    void setDTtoVx(byte x) {
         DT = V[x];
     }
 
-    private void setSTtoVx(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-
+    void setSTtoVx(byte x) {
         ST = V[x];
     }
 
-    private void addIVx(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-
+    void addIVx(byte x) {
         I = (short) (shortToIntValue(I) + byteToIntValue(V[x]));
     }
 
-    private void setISpriteVx(short[] arguments) {
-        byte x = Instruction.getX(arguments);
-
+    void setISpriteVx(byte x) {
         I = (short) (byteToIntValue(V[x]) * Memory.SPRITE_SIZE);
     }
 
-    private void storeVxBCDRepresentation(short[] arguments) {
+    void storeVxBCDRepresentation(byte x) {
         // Takes the decimal value of Vx, and
         // places the hundreds digit in memory at location in I,
         // the tens digit at location I+1,
         // and the ones digit at location I+2
-        byte x = Instruction.getX(arguments);
-
         int vXValue = byteToIntValue(V[x]);
         int power = 100;
 
@@ -611,8 +586,7 @@ public class ProcessingUnit  {
         }
     }
 
-    private void storeRegisterV0ToVx(short[] arguments) {
-        byte x = Instruction.getX(arguments);
+    void storeRegisterV0ToVx(byte x) {
         int to = byteToIntValue(x);
 
         int memoryStart = shortToIntValue(I);
@@ -623,8 +597,7 @@ public class ProcessingUnit  {
         }
     }
 
-    private void readToRegisterV0ToVx(short[] arguments) {
-        byte x = Instruction.getX(arguments);
+    void readToRegisterV0ToVx(byte x) {
         int to = byteToIntValue(x);
 
         int register = 0;
@@ -635,11 +608,11 @@ public class ProcessingUnit  {
         }
     }
 
-    private int byteToIntValue(byte b) {
+    int byteToIntValue(byte b) {
         return b & 0xff;
     }
 
-    private int shortToIntValue(short s) {
+    int shortToIntValue(short s) {
         return s & 0xffff;
     }
 }

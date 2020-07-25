@@ -48,8 +48,16 @@ public enum Instruction {
     private short patternMask;
     private short[] valueMasks;
 
-    public boolean match(short instruction) {
-        return (instruction & patternMask) == pattern;
+    public static Instruction getMatched(short instruction) {
+        Instruction instructionPattern = null;
+        for (Instruction existingInstruction : Instruction.values()) {
+            if (existingInstruction.match(instruction)) {
+                instructionPattern = existingInstruction;
+                break;
+            }
+        }
+
+        return instructionPattern;
     }
 
     public static short getNnnn(short[] arguments) {
@@ -87,5 +95,9 @@ public enum Instruction {
         }
 
         return arguments;
+    }
+
+    public boolean match(short instruction) {
+        return (instruction & patternMask) == pattern;
     }
 }
